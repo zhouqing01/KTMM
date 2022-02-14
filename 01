@@ -1,0 +1,10 @@
+arr = input()
+count = 0
+newarr = []
+
+for x in arr:
+    if x not in newarr:
+        newarr.append(x)
+        count += 1
+
+print(len(newarr))
