@@ -8,19 +8,21 @@ import sys
 import pygame
 from OpenGL.GLU import *
 from pygame.locals import *
-import sympy as sm
-from sympy import solve_poly_system
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib import colors
+from matplotlib import cm
+import pywavefront
 
 # Python Tkinter 文本框用来让用户输入一行文本字符串
 def check():
     s1 = str(e1.get()) #获取文本框内容
     s2 = str(e2.get())
     s3 = str(e3.get())
-    global name_file
+    global name_file_model
     global name_file_s_parameter
     global name_file_print
-    name_file = s1
+    name_file_model = s1
     name_file_s_parameter = s2
     name_file_print = s3
     root.destroy() #destroy()只是终止mainloop并删除所有小部件
@@ -44,23 +46,23 @@ text2.place(x=10, y=50)
 text3 = Label(root, text="Выходный файл:", bg='cyan')
 text3.place(x=10, y=90)
 root.mainloop() #检测窗口相应的事件，=while true
-name_file = name_file.replace('\\', '/')
+name_file_model = name_file_model.replace('\\', '/')
 name_file_s_parameter = name_file_s_parameter.replace('\\', '/')
 # massiv_parametrov = parameter(name_file_s_parameter)
 
 with open(name_file_s_parameter, newline='') as f:
-    line_array = []
+    list_parameters = []
     reader = csv.reader(f)
     for row in reader:
         lines = [x for x in ';'.join(row).split(';')]
-        line_array.append(lines)
+        list_parameters.append(lines)
 
-massiv_parametrov = np.array(list(map(float, line_array[1])))
+massiv_parametrov = np.array(list(map(float, list_parameters[1])))
 
 
 class objloader:
     def __init__(self): #
-        self.vert_coords = []
+        self.vertex_coordinates = []
         self.vertex_index = []
         self.part = 0
 
@@ -84,22 +86,31 @@ class objloader:
                 part.append(tuple([float(t) for t in values[1:4]]))
             if ((massiv_index_strok[w] < k) and (k < massiv_index_strok[w + 1]) and (w < self.part - 1)):
                 if len(values) > 1 and values[0] == 'f':
-                    part_index[w].append(tuple([int(t) - 1 for t in values[1:4]]))
+                    part_index[w].append(tuple([int(t) for t in values[1:4]])) #int(t) - 1
             if k == massiv_index_strok[w + 1] and w + 1 < self.part - 1:
                 w = w + 1
                 continue
             if k > massiv_index_strok[self.part - 1]:
                 if len(values) > 1 and values[0] == 'f':
                     part_index[self.part - 1].append(tuple([int(t) - 1 for t in values[1:4]]))
-        self.vert_coords = tuple(part) #‘v’
+        self.vertex_coordinates = tuple(part) #‘v’
         self.vertex_index = tuple([tuple(part_index[i]) for i in range(self.part)]) #‘f’
 
 
 obj = objloader()
-obj.load_model(name_file) #对obj文件进行读取操作
-vertices = obj.vert_coords #‘v’顶点坐标
+obj.load_model(name_file_model) #对obj文件进行读取操作
+vertices = obj.vertex_coordinates #‘v’顶点坐标
 edges = obj.vertex_index #‘f‘为边缘
 r = obj.part
+
+# print(vertices)
+# print(vertices[0])
+# print(vertices[0][0])
+# print(edges)
+# print(edges[0])
+# print(edges[1])
+# print(edges[0][0])
+# print(edges[0][0][0])
 
 level = [0, 6, 8, 9]
 
@@ -127,23 +138,23 @@ for k in range(r):
         square_pov = square_pov + square(vertices[edge[0]], vertices[edge[1]], vertices[edge[2]])
     square_area_element.append(square_pov)
 
-epsilon = np.array(list(map(float, line_array[0])))
-c = np.array(list(map(float, line_array[1])))
+epsilon = np.array(list(map(float, list_parameters[0])))
+c = np.array(list(map(float, list_parameters[1])))
 lambdi = np.zeros((5, 5))
-lambdi[0][1] = float(line_array[3][0])
-lambdi[1][2] = float(line_array[4][0])
-lambdi[2][3] = float(line_array[5][0])
-lambdi[3][4] = float(line_array[6][0])
+lambdi[0][1] = float(list_parameters[3][0])
+lambdi[1][2] = float(list_parameters[4][0])
+lambdi[2][3] = float(list_parameters[5][0])
+lambdi[3][4] = float(list_parameters[6][0])
 A = massiv_parametrov[0]
 
-Q_R_0 = float(line_array[2][0])
+Q_R_0 = float(list_parameters[2][0])
 
 def Q_R_1(t):
     return (A * (20 + 3 * np.sin(t / 4)))
 
-Q_R_2 = float(line_array[2][2])
-Q_R_3 = float(line_array[2][3])
-Q_R_4 = float(line_array[2][4])
+Q_R_2 = float(list_parameters[2][2])
+Q_R_3 = float(list_parameters[2][3])
+Q_R_4 = float(list_parameters[2][4])
 K = np.zeros((5, 5))
 K[0][1] = lambdi[0][1] * square_search[0]
 K[1][2] = lambdi[1][2] * square_search[1]
@@ -187,7 +198,7 @@ def g(y, x):
 
 
 # t = np.linspace(0, 15000, 150000)
-t = np.linspace(0, 12, 200)
+t = np.linspace(0, 12, 121)
 
 sol = odeint(g, start, t)
 # sol = odeint(g, p, t)
@@ -205,39 +216,102 @@ plt.show()
 colors = ((1, 1, 0), (1, 0, 1), (0, 1, 1), (1, 0, 0), (0, 0, 1), (1, 0, 0), (1, 1, 1), (0.7, 0.2, 1), (1, 0.5, 0.5))
 
 headers = ('t', 'Part1', 'Part2', 'Part3', 'Part4', 'Part5')
-with open(name_file_print, 'w') as f:
+with open('table of part.csv', 'w') as f:
     f_csv = csv.DictWriter(f, fieldnames=['t', 'Part1', 'Part2', 'Part3', 'Part4', 'Part5'])
     f_csv.writerow({'t': 't', 'Part1': 'Part1', 'Part2': 'Part2', 'Part3': 'Part3', 'Part4': 'Part4', 'Part5': 'Part5'})
     for i in range(len(t)):
         f_csv.writerow({'t': t[i], 'Part1': sol[i, 0], 'Part2': sol[i, 1], 'Part3': sol[i, 2], 'Part4': sol[i, 3], 'Part5': sol[i, 4]})
 
+data = []
+with open(name_file_print, 'w', newline='') as f:
+    writer = csv.writer(f)
 
-def model(): #
-    glBegin(GL_TRIANGLES)
+    for i in range(5):
+        for t in range(121):
+            data.append(sol[:, i][t])
+        writer.writerow(data)
+        data = []
+
+
+
+time_point = 0
+
+def Model():
+    global time_point
+
+    scene = pywavefront.Wavefront(name_file_model, collect_faces=True)
+    scene_box = (scene.vertices[0], scene.vertices[0])
+    for vertex in scene.vertices:
+        min_v = [min(scene_box[0][i], vertex[i]) for i in range(3)]
+        max_v = [max(scene_box[1][i], vertex[i]) for i in range(3)]
+        scene_box = (min_v, max_v)
+
+    scene_size = [scene_box[1][i] - scene_box[0][i] for i in range(3)]
+    max_scene_size = max(scene_size)
+    scaled_size = 5
+    scene_scale = [scaled_size / max_scene_size for i in range(3)]
+    scene_trans = [-(scene_box[1][i] + scene_box[0][i]) / 2 for i in range(3)]
+
+    glPushMatrix() #保存当前位置
+    glScalef(*scene_scale) #模型缩放
+    glTranslatef(*scene_trans) #模型移动
+
+    with open(name_file_print, newline='') as f:
+        model_parameters = []
+        reader = csv.reader(f)
+        for row in reader:
+            line = [float(x) for x in ','.join(row).split(',')]
+            model_parameters.append(line)
+
+    Max = 0
+    Min = 1000
+    for t in range(len(model_parameters[0])):
+        for i in range(5):
+            if (model_parameters[i][t] > Max):
+                Max = model_parameters[i][t]
+            if (model_parameters[i][t] < Min):
+                Min = model_parameters[i][t]
+
+    norm = matplotlib.colors.Normalize(vmin=Min, vmax=Max) #将数字映射到颜色或以一维颜色数组进行颜色规格转换
+
+    glBegin(GL_TRIANGLES)  # 开始画三角形
     for g in range(r):
+        glColor3fv(matplotlib.cm.get_cmap("hsv")(norm(model_parameters[g][int(time_point)]))[0:3])  # ’hsv‘,不同的颜色参数
         for edge in edges[g]:
             for vertex in edge:
-                glColor3fv(colors[g]) #设定不同区域的颜色
-                glVertex3fv(vertices[vertex]) #引入空白的模型
+                glVertex3fv(vertices[vertex])
     glEnd()
+
+    glPopMatrix() #回到pushmatrix的位置
+
+    if (time_point < len(model_parameters[0]) - 1):
+        time_point = time_point + 1
 
 
 def main():
     pygame.init()
-    display = (600, 600)
+    display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
-    gluPerspective(42, (display[0] / display[1]), 0.1, 50)
-    glTranslatef(0, 0, -40) #z轴平移，相当于缩小模型
+    gluPerspective(42, (display[0] / display[1]), 0.1, 50.0)
+    glTranslatef(0.0, 0.0, -10) #z轴平移，相当于缩小模型
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                pygame.display.quit()
                 pygame.quit()
                 sys.exit()
-        glRotatef(10, 1, 1, 1) #绕原点逆时针旋转10度
-        glClearColor(0.1, 0.8, 0.1, 0) #分别为红绿蓝和alpha值
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT) #清楚缓冲区
-        model()  #引入模型
-        pygame.display.flip() #更新屏幕显示
-        pygame.time.wait(10)
+
+        glClearColor(0.1, 0.8, 0.1, 0.0) #分别为红绿蓝和alpha值
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)  # 清楚缓冲区
+
+        glEnable(GL_DEPTH_TEST) #启用深度测试，根据坐标自动隐藏被遮住的图形
+        glDepthFunc(GL_LESS) #输入的深度值小于参考值，则通过
+
+        Model()
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+        pygame.display.flip() # 更新屏幕显示
+        pygame.time.wait(1)
 
 main()
